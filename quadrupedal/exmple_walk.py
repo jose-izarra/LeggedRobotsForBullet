@@ -2,6 +2,7 @@ import time
 import numpy as np
 from robot import Quadrupedal
 import math
+import pybullet as pb
 
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle):
@@ -46,19 +47,31 @@ if __name__ == "__main__":
     # Oval trajectory parameters
     oval_center_f = [0.2, -0.2]  # Center of the oval path (front legs)
     oval_center_b = [-0.2, -0.2]  # Center of the oval path (back legs)
-    x_radius = 0.1  # Radius along x-axis (horizontal stretch)
-    z_radius = 0.01  # Radius along z-axis (vertical stretch)
+    # x_radius = 0.1  # Radius along x-axis (horizontal stretch)
+    # z_radius = 0.01  # Radius along z-axis (vertical stretch)
+
+    width_slider = pb.addUserDebugParameter("Width", 0.01, 0.5, 0.1)
+    height_slider = pb.addUserDebugParameter("Height", 0.01, 0.1, 0.01)
 
     # Angle increment for smoother movement
-    angle_step = 0.06
+    # Slider for angle_step
+    angle_step_slider = pb.addUserDebugParameter("Angle Step", 0.01, 1.0, 0.05)
     angle = 0.0
 
     try:
         while True:
+
+            # Get the angle step from the slider
+            angle_step = pb.readUserDebugParameter(angle_step_slider)
             # Update angles
             angle += angle_step
             if angle > 2 * math.pi:
                 angle -= 2 * math.pi
+
+
+            # Get the width and height from the sliders
+            x_radius = pb.readUserDebugParameter(width_slider)
+            z_radius = pb.readUserDebugParameter(height_slider)
 
             # Diagonal Pair 1: Front Right (RF) and Left Hind (LH)
             RF_x, RF_z = generate_oval_trajectory(oval_center_f, x_radius, z_radius, angle)
