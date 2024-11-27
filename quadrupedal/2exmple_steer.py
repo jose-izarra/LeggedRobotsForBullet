@@ -3,6 +3,7 @@ import numpy as np
 from robot import Quadrupedal
 import math
 import pybullet as pb
+import controls
 
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle):
@@ -31,8 +32,23 @@ def generate_half_oval_trajectory(center, x_radius, z_radius, angle):
     """
     ...
 
+def reset_robot(robot):
+    """
+    Resets the robot to its initial position, orientation, and velocities.
 
-if __name__ == "__main__":
+    :param robot: An instance of the Quadrupedal class.
+    """
+    # Reset the base position and orientation
+    pb.resetBasePositionAndOrientation(robot._robotId, [0, 0, 0.55], [0, 0, 0, 1])
+    
+    # Reset the base velocity
+    pb.resetBaseVelocity(robot._robotId, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
+    
+    print("Robot has been reset!")
+
+
+def main():
+
     # Initial target positions
     targetPositionRF = np.array([0.2, -0.11, -0.2])  # Right Front
     targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
@@ -47,11 +63,12 @@ if __name__ == "__main__":
     # Oval trajectory parameters
     oval_center_f = [0.2, -0.2]  # Center of the oval path (front legs)
     oval_center_b = [-0.2, -0.2]  # Center of the oval path (back legs)
-    # x_radius = 0.1  # Radius along x-axis (horizontal stretch)
-    # z_radius = 0.01  # Radius along z-axis (vertical stretch)
 
-    width_slider = pb.addUserDebugParameter("Width", 0.01, 0.5, 0.1)
-    height_slider = pb.addUserDebugParameter("Height", 0.01, 0.1, 0.01)
+    initial_width = 0.1  # Radius along x-axis (horizontal stretch)
+    initial_height = 0.01  # Radius along z-axis (vertical stretch)
+
+    width_slider = pb.addUserDebugParameter("Width", 0.01, 0.5, initial_width)
+    height_slider = pb.addUserDebugParameter("Height", 0.01, 0.1, initial_height)
 
     # Angle increment for smoother movement
     # Slider for angle_step
@@ -60,6 +77,10 @@ if __name__ == "__main__":
 
     try:
         while True:
+
+            if controls.is_reset_key_pressed(): # "R" key
+                reset_robot(qdrp)
+
 
             # Get the angle step from the slider
             angle_step = pb.readUserDebugParameter(angle_step_slider)
@@ -102,5 +123,13 @@ if __name__ == "__main__":
             # Advance simulation
             qdrp.oneStep()
 
+        
+
     except KeyboardInterrupt:
         print("Simulation stopped by user.")
+
+
+
+if __name__ == "__main__":
+
+    main()

@@ -26,6 +26,10 @@ class Robot:
         pb.setAdditionalSearchPath(pybullet_data.getDataPath())
         pb.setGravity(0,0,-9.8)
         self._planeId = pb.loadURDF(planePATH)
+
+        # removed the friction from the plane
+        pb.changeDynamics(self._planeId, -1, lateralFriction=0)
+
         self._robotId = pb.loadURDF(robotPATH,startPosition, pb.getQuaternionFromEuler(startOrientation))
         self._controlMode = controlMode
         self.numJoint = pb.getNumJoints(self._robotId)
@@ -60,10 +64,11 @@ class Robot:
         pb.resetBasePositionAndOrientation(self._robotId, position, orientation)
 
     def oneStep(self):
-        
-
+    
         robotPosition, _ = pb.getBasePositionAndOrientation(self._robotId)
-        pb.resetDebugVisualizerCamera(cameraDistance=1.0, cameraYaw=180, cameraPitch=-10, cameraTargetPosition=robotPosition)
+
+        # Comment to disbale camera lock
+        # pb.resetDebugVisualizerCamera(cameraDistance=1.0, cameraYaw=180, cameraPitch=-10, cameraTargetPosition=robotPosition)
         pb.stepSimulation()
         time.sleep(self._timeStep)
 
