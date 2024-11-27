@@ -22,9 +22,9 @@ class IMU:
 class Robot:
     def __init__(self, timeStep, robotPATH, startPosition, startOrientation, maxForce,
                 controlMode=pb.POSITION_CONTROL, planePATH="plane.urdf"):
-        physicsClient = pb.connect(pb.GUI)
-        pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-        pb.setGravity(0,0,-9.8)
+        # physicsClient = pb.connect(pb.GUI)
+        # pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # pb.setGravity(0,0,-9.8)
         self._planeId = pb.loadURDF(planePATH)
 
         # lateralFriction = 0 for 0 friction

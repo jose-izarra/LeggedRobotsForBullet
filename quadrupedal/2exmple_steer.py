@@ -3,6 +3,7 @@ import numpy as np
 from robot import Quadrupedal
 import math
 import pybullet as pb
+import pybullet_data
 import controls
 
 
@@ -49,15 +50,20 @@ def reset_robot(robot):
 
 def main():
 
+    physicsClient = pb.connect(pb.GUI)
+    pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+    pb.setGravity(0,0,-9.8)
+    
+
     # Initial target positions
-    targetPositionRF = np.array([0.2, -0.2, -0.2])  # Right Front
-    targetPositionRH = np.array([-0.2, -0.2, -0.2])  # Right Hind
-    targetPositionLF = np.array([0.2, 0.2, -0.2])    # Left Front
-    targetPositionLH = np.array([-0.2, 0.2, -0.2])   # Left Hind
+    targetPositionRF = np.array([0.2, -0.11, -0.2])  # Right Front
+    targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
+    targetPositionLF = np.array([0.2, 0.11, -0.2])    # Left Front
+    targetPositionLH = np.array([-0.2, 0.11, -0.2])   # Left Hind
 
     # Quadrupedal robot initialization
     qdrp = Quadrupedal(timeStep=1./240., initialCoMheight=0.3,
-                       startPosition=[0, 0, 0.55], startOrientation=[0., 0., 0.],
+                       startPosition=[0, 1, 0.55], startOrientation=[0., 0., 0.],
                        maxForce=12, robotPATH="urdf/quadrupedal.urdf")
 
     # Oval trajectory parameters
