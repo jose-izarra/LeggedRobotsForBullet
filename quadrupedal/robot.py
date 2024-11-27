@@ -27,7 +27,7 @@ class Robot:
         pb.setGravity(0,0,-9.8)
         self._planeId = pb.loadURDF(planePATH)
 
-        # removed the friction from the plane
+        # lateralFriction = 0 for 0 friction
         pb.changeDynamics(self._planeId, -1, lateralFriction=0)
 
         self._robotId = pb.loadURDF(robotPATH,startPosition, pb.getQuaternionFromEuler(startOrientation))
