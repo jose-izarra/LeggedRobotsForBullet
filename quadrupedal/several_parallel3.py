@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import threading
 
-def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.05, jitter_magnitude=0.01):
+def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
     Generate a point on an oval trajectory with random jitter applied occasionally to simulate a more realistic movement.
 
@@ -212,8 +212,8 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
     # Initialize plot elements for each robot
     for robot_id in range(num_simulations):
-        line, = ax.plot([], [], [], label=f"Robot {robot_id} RF", lw=0.5)  # 3D trajectory line
-        point, = ax.plot([], [], [], 'ro')  # Red dot for the latest point
+        line, = ax.plot([], [], [], label=f"Robot {robot_id} RF", lw=1)  # 3D trajectory line
+        point, = ax.plot([], [], [], 'ro', markersize=2.5)  # Red dot for the latest point
         lines.append(line)
         points.append(point)
 
@@ -283,7 +283,7 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
 def main():
     num_robots = 1 # Number of robots per simulation
-    num_simulations = 4 # Number of parallel simulations
+    num_simulations = 3 # Number of parallel simulations
 
     # Multiprocessing Queue for thread-safe coordinate logging
     coord_queue = Queue(maxsize=1000)  # Limiting queue size to prevent memory issues
