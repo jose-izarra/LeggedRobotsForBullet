@@ -1,0 +1,4 @@
+Some considerations:
+- PyBullet runs on a single thread: The simulation physics (e.g., gravity, collisions) need to be updated in the main thread. Therefore, we can parallelize the trajectory control for each robot, but the physics step will still need to be handled in the main thread. This is also reflected when initializing the simulation, each robot is created in the main thread, one after the other.
+- Thread safety: Each robot's control logic must be isolated, and that only one thread interacts with PyBullet's physics simulation at any given time.
+- Jitter is added to the trajectory to add the uncertainty of the real world as would be in a reainforcement learning scenario. 
