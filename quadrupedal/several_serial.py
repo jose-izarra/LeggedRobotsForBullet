@@ -5,33 +5,37 @@ import math
 import pybullet as pb
 import pybullet_data
 import controls
+import random
 
-
-def generate_oval_trajectory(center, x_radius, z_radius, angle):
+def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.05, jitter_magnitude=0.01):
     """
-    Generate a point on an oval trajectory.
+    Generate a point on an oval trajectory with random jitter applied occasionally.
 
     :param center: Center point of the oval [x, z]
     :param x_radius: Radius along x-axis
     :param z_radius: Radius along z-axis
     :param angle: Current angle (in radians)
-    :return: [x, z] coordinates of the point
+    :param jitter_frequency: Probability of applying jitter at each iteration (0.0 to 1.0)
+    :param jitter_magnitude: Maximum range for jitter applied to x, y, z
+    :return: [x, z] coordinates of the point with optional jitter
     """
+    # Calculate the basic oval trajectory point
     x = center[0] + x_radius * math.cos(-angle)
-    z = center[1] + z_radius * math.sin(-angle)
-    return x, z
+    y = center[1]  # Assuming the center's y position doesn't change (static on the ground)
+    z = center[2] + z_radius * math.sin(-angle)
 
-def generate_half_oval_trajectory(center, x_radius, z_radius, angle):
-    """
-    Generate a point on a half-oval trajectory.
+    # Randomly decide if jitter should be applied
+    if random.random() < jitter_frequency:
+        jitter_x = random.uniform(-jitter_magnitude, jitter_magnitude)
+        jitter_y = random.uniform(-0.1, 0.1)  # You can vary jitter range for y as well if needed
+        jitter_z = random.uniform(-jitter_magnitude, jitter_magnitude)
 
-    :param center: Center point of the oval [x, z]
-    :param x_radius: Radius along x-axis
-    :param z_radius: Radius along z-axis
-    :param angle: Current angle (in radians)
-    :return: [x, z] coordinates of the point
-    """
-    ...
+        # Apply the jitter
+        x += jitter_x
+        y += jitter_y
+        z += jitter_z
+
+    return x, y, z
 
 def reset_robot(robot, i):
     """
@@ -84,8 +88,10 @@ def main():
     #                    maxForce=12, robotPATH="urdf/quadrupedal.urdf")
 
     # Oval trajectory parameters
-    oval_center_f = [0.2, -0.2]  # Center of the oval path (front legs)
-    oval_center_h = [-0.2, -0.2]  # Center of the oval path (back legs)
+    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path 
+    oval_center_lh = [-0.2, 0.11, -0.2] 
+    oval_center_lf = [0.2, 0.11, -0.2] 
+    oval_center_rh = [-0.2, -0.11, -0.2]  
 
     initial_width = 0.1  # Radius along x-axis (horizontal stretch)
     initial_height = 0.01  # Radius along z-axis (vertical stretch)
@@ -118,11 +124,11 @@ def main():
             for qdrp in robots:
 
                 # Diagonal Pair 1: Front Right (RF) and Left Hind (LH)
-                RF_x, RF_z = generate_oval_trajectory(oval_center_f, x_radius, z_radius, angle)
-                LH_x, LH_z = generate_oval_trajectory(oval_center_h, x_radius, z_radius, angle)
+                RF_x, RF_y, RF_z = generate_oval_trajectory(oval_center_rf, x_radius, z_radius, angle)
+                LH_x, LH_y, LH_z = generate_oval_trajectory(oval_center_lh, x_radius, z_radius, angle)
                 # Diagonal Pair 2: Front Left (LF) and Right Hind (RH) (phase-offset by π)
-                LF_x, LF_z = generate_oval_trajectory(oval_center_f, x_radius, z_radius, angle + math.pi)
-                RH_x, RH_z = generate_oval_trajectory(oval_center_h, x_radius, z_radius, angle + math.pi)
+                LF_x, LF_y, LF_z = generate_oval_trajectory(oval_center_lf, x_radius, z_radius, angle + math.pi)
+                RH_x, RH_y, RH_z = generate_oval_trajectory(oval_center_rh, x_radius, z_radius, angle + math.pi)
 
                 targetPositionRF = np.array([0.2, -0.11, -0.2])  # Right Front
                 targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
@@ -130,10 +136,10 @@ def main():
                 targetPositionLH = np.array([-0.2, 0.11, -0.2])   # Left Hind
                 
                 # Update target positions
-                targetPositionRF[0], targetPositionRF[2] = RF_x, RF_z
-                targetPositionLH[0], targetPositionLH[2] = LH_x, LH_z
-                targetPositionLF[0], targetPositionLF[2] = LF_x, LF_z
-                targetPositionRH[0], targetPositionRH[2] = RH_x, RH_z
+                targetPositionRF[0], targetPositionRF[1], targetPositionRF[2] = RF_x, RF_y, RF_z
+                targetPositionLH[0], targetPositionLH[1], targetPositionLH[2] = LH_x, LH_y, LH_z
+                targetPositionLF[0], targetPositionLF[1], targetPositionLF[2] = LF_x, LF_y, LF_z
+                targetPositionRH[0], targetPositionRH[1], targetPositionRH[2] = RH_x, RH_y, RH_z
 
                 # Inverse Kinematics
                 RFjointPositions = qdrp.inverseKinematics(targetPositionRF, targetLeg=qdrp.legRF)
@@ -149,8 +155,6 @@ def main():
 
                 # Advance simulation
                 qdrp.oneStep()
-
-        
 
     except KeyboardInterrupt:
         print("Simulation stopped by user.")
