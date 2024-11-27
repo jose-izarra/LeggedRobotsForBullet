@@ -212,7 +212,7 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
     # Initialize plot elements for each robot
     for robot_id in range(num_simulations):
-        line, = ax.plot([], [], [], label=f"Robot {robot_id} RF", lw=2)  # 3D trajectory line
+        line, = ax.plot([], [], [], label=f"Robot {robot_id} RF", lw=0.5)  # 3D trajectory line
         point, = ax.plot([], [], [], 'ro')  # Red dot for the latest point
         lines.append(line)
         points.append(point)
@@ -283,7 +283,7 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
 def main():
     num_robots = 1 # Number of robots per simulation
-    num_simulations = 2 # Number of parallel simulations
+    num_simulations = 4 # Number of parallel simulations
 
     # Multiprocessing Queue for thread-safe coordinate logging
     coord_queue = Queue(maxsize=1000)  # Limiting queue size to prevent memory issues
