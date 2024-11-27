@@ -6,9 +6,11 @@ import pybullet_data
 import controls
 import random
 from robot import Quadrupedal
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Queue
+from queue import Empty
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import threading
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.05, jitter_magnitude=0.01):
     """
@@ -60,7 +62,7 @@ def reset_robot(robot, i):
     
     print("Robot has been reset!")
 
-def run_simulation(robot_id, num_robots, use_gui=True, coord_log=None):
+def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
     """
     Run an independent simulation for each robot in a separate PyBullet client.
     Log the coordinates of each leg for plotting.
@@ -102,6 +104,14 @@ def run_simulation(robot_id, num_robots, use_gui=True, coord_log=None):
     # Angle increment for faster or slower movement
     angle_step_slider = pb.addUserDebugParameter("Angle Step", 0.01, 1.0, 0.05)
     angle = 0.0
+
+    # Logging variables to handle coordinate logging
+    coordinates_rf = {
+        'id': robot_id,
+        'x_coords': [],
+        'y_coords': [],
+        'z_coords': []
+    }
 
     try:
         while True:
@@ -159,20 +169,36 @@ def run_simulation(robot_id, num_robots, use_gui=True, coord_log=None):
 
                 # Advance simulation
                 qdrp.oneStep()
-            
-            # log the coordinates of RF leg
 
+                # Log coordinates for RF leg
+                coordinates_rf['x_coords'].append(RF_x)
+                coordinates_rf['y_coords'].append(RF_y)
+                coordinates_rf['z_coords'].append(RF_z)
 
+                # Keep only the last max_points
+                if len(coordinates_rf['x_coords']) > max_points:
+                    coordinates_rf['x_coords'] = coordinates_rf['x_coords'][-max_points:]
+                    coordinates_rf['y_coords'] = coordinates_rf['y_coords'][-max_points:]
+                    coordinates_rf['z_coords'] = coordinates_rf['z_coords'][-max_points:]
+
+                # Put coordinates in the queue every few iterations
+                if len(coordinates_rf['x_coords']) % 10 == 0:
+                    try:
+                        coord_queue.put(coordinates_rf.copy(), block=False)
+                    except Exception:
+                        # If queue is full, just pass
+                        pass
+
+            time.sleep(1/240.)  # Maintain simulation speed
 
     except KeyboardInterrupt:
         print(f"Simulation {robot_id} stopped by user.")
     finally:
         pb.disconnect()
 
-
-def plot_trajectories(coord_log, num_simulations):
+def plot_trajectories(coord_queue, num_simulations, max_points=500):
     """
-    Plot the trajectories of the robots in real-time.
+    Plot the trajectories of the robots in real-time using a queue.
     """
     fig, ax = plt.subplots()
     lines = []
@@ -185,6 +211,27 @@ def plot_trajectories(coord_log, num_simulations):
         lines.append(line)
         points.append(point)
 
+    # Initialize data stores for each robot
+    robot_data = {i: {'x_coords': [], 'y_coords': [], 'z_coords': []} for i in range(num_simulations)}
+
+    def update_robot_data():
+        """
+        Continuously update robot data from the queue
+        """
+        while True:
+            try:
+                # Try to get data from the queue without blocking
+                data = coord_queue.get(block=False)
+                robot_id = data['id']
+                
+                # Update the data for the specific robot
+                robot_data[robot_id]['x_coords'] = data['x_coords']
+                robot_data[robot_id]['y_coords'] = data['y_coords']
+                robot_data[robot_id]['z_coords'] = data['z_coords']
+            except Empty:
+                # No data in the queue
+                break
+
     def init():
         ax.set_xlim(-1, 1)
         ax.set_ylim(-1, 1)
@@ -193,53 +240,58 @@ def plot_trajectories(coord_log, num_simulations):
         ax.set_ylabel("Z")
         ax.legend()
         return lines + points
-
+    
     def update(frame):
+        # Update data from queue
+        update_robot_data()
+
         for robot_id in range(num_simulations):
-            trajectory = coord_log[robot_id]["RF"]
-            print(f"Robot {robot_id} RF: {trajectory}")
-            if len(trajectory) > 0:
-                x_data, y_data, z_data = zip(*trajectory)
+            x_data = robot_data[robot_id].get('x_coords', [])
+            z_data = robot_data[robot_id].get('z_coords', [])
+
+            if x_data and z_data:  # Use pythonic check for non-empty lists
                 lines[robot_id].set_data(x_data, z_data)  # Update trajectory
-                points[robot_id].set_data(x_data[-1], z_data[-1])  # Update red dot
+                
+                # Ensure the last point is a sequence (list or array)
+                last_x = [x_data[-1]] if not isinstance(x_data[-1], (list, np.ndarray)) else x_data[-1]
+                last_z = [z_data[-1]] if not isinstance(z_data[-1], (list, np.ndarray)) else z_data[-1]
+                
+                points[robot_id].set_data(last_x, last_z)  # Update red dot
             else:
                 lines[robot_id].set_data([], [])
                 points[robot_id].set_data([], [])
         return lines + points
 
+    # Create the animation
     ani = FuncAnimation(fig, update, init_func=init, blit=True, interval=50)
     plt.show()
-
 
 def main():
     num_robots = 1 # Number of robots per simulation
     num_simulations = 2 # Number of parallel simulations
 
-    manager = Manager()
-    coord_log = manager.dict()
-
+    # Use a multiprocessing Queue for thread-safe coordinate logging
+    coord_queue = Queue(maxsize=1000)  # Limit queue size to prevent memory issues
 
     processes = []
 
     # Run simulations in parallel for each robot
     for i in range(num_simulations):
         use_gui = (i == 0) # Only show the GUI for the first simulation
-        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_log))
+        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue))
         p.start()
         processes.append(p)
     
-    # # Wait for all processes to finish
-    # for p in processes:
-    #     p.join()
-
     # Start plotting
     try:
-        plot_trajectories(coord_log, num_simulations)
+        plot_trajectories(coord_queue, num_simulations)
+    except KeyboardInterrupt:
+        print("Plotting stopped by user.")
     finally:
-        # # Ensure all processes terminate cleanly
-        # for p in processes:
-        #     p.terminate()
-        p.join()
+        # Ensure all processes terminate cleanly
+        for p in processes:
+            p.terminate()
+            p.join()
 
 if __name__ == "__main__":
     main()

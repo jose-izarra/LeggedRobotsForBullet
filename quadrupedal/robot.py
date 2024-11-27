@@ -68,7 +68,7 @@ class Robot:
         robotPosition, _ = pb.getBasePositionAndOrientation(self._robotId)
 
         # Comment to disbale camera lock
-        # pb.resetDebugVisualizerCamera(cameraDistance=1.0, cameraYaw=180, cameraPitch=-10, cameraTargetPosition=robotPosition)
+        pb.resetDebugVisualizerCamera(cameraDistance=1.0, cameraYaw=180, cameraPitch=-10, cameraTargetPosition=robotPosition)
         pb.stepSimulation()
         time.sleep(self._timeStep)
 
