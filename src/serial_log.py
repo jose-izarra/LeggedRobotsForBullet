@@ -8,7 +8,7 @@ import random
 from robot import Quadrupedal
 from multiprocessing import Queue
 import csv
-
+import os
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
@@ -312,7 +312,19 @@ if __name__ == "__main__":
     main()
     print("Total time taken for all simulations:", total_time[0])
 
-    # Write the logged coordinates to a CSV file
-    with open('serial.csv', mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([total_time[0]])
+
+    file_path = 'serial.csv'
+    header = ['execution_time']
+    file_exists = os.path.isfile(file_path)
+
+    # Write simulation time to CSV
+    # Open the file in append mode
+    with open(file_path, mode='a', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+
+        # If the file doesn't exist or is empty, write the header
+        if not file_exists or os.stat(file_path).st_size == 0:
+            writer.writerow(header)
+
+        # Append the execution time value
+        writer.writerow([total_time[0   ]])

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d import Axes3D
 import csv
+import os
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
@@ -322,10 +323,23 @@ def main():
     execution_time = end_time - start_time
     print(f"Total time taken: {execution_time} seconds.")
 
+
+
+    file_path = 'parallel.csv'
+    header = ['execution_time']
+    file_exists = os.path.isfile(file_path)
     # Write simulation time to CSV
-    with open('parallel.csv', mode='a', newline='') as file:
-        writer = csv.writer(file)
+    # Open the file in append mode
+    with open(file_path, mode='a', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+
+        # If the file doesn't exist or is empty, write the header
+        if not file_exists or os.stat(file_path).st_size == 0:
+            writer.writerow(header)
+
+        # Append the execution time value
         writer.writerow([execution_time])
+
 
 
 if __name__ == "__main__":
