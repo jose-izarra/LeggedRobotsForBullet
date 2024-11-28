@@ -1,6 +1,8 @@
 import time
 import numpy as np
 import math
+import csv
+import os
 import pybullet as pb
 import pybullet_data
 import controls
@@ -10,7 +12,7 @@ from multiprocessing import Process, Manager, Queue
 from queue import Empty
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import threading
+from mpl_toolkits.mplot3d import Axes3D
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
@@ -62,7 +64,7 @@ def reset_robot(robot, i):
     
     print("Robot has been reset!")
 
-def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
+def run_simulation(robot_id, num_robots, use_gui, coord_queue, rev_status, max_points=500):
     """
     Run an independent simulation for each robot in a separate PyBullet client.
     Log the coordinates of each leg for plotting.
@@ -136,6 +138,9 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
             if angle > 2 * math.pi:
                 angle -= 2 * math.pi
 
+                # Set the rev_status to True after the first revolution
+                rev_status[robot_id] = True
+            
             for qdrp in robots:
                 # Diagonal Pair 1: Front Right (RF) and Left Hind (LH)
                 RF_x, RF_y, RF_z = generate_oval_trajectory(oval_center_rf, x_radius, z_radius, angle)
@@ -200,10 +205,6 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
     """
     Plot the trajectories of the robots in real-time using a queue in 3D.
     """
-    from mpl_toolkits.mplot3d import Axes3D
-    import matplotlib.pyplot as plt
-    from matplotlib.animation import FuncAnimation
-    from queue import Empty
 
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
@@ -288,17 +289,54 @@ def main():
     # Multiprocessing Queue for thread-safe coordinate logging
     coord_queue = Queue(maxsize=1000)  # Limiting queue size to prevent memory issues
 
+    manager = Manager()
+    
+    # array of booleans to track when one process does its first oval revolution
+    rev_status = manager.list([False for _ in range(num_simulations)])
+
     processes = []
+
+    # Start time and end time for tracking
+    start_time = None
+    end_time = None
 
     # Parallel clients for each simulation
     for i in range(num_simulations):
-        use_gui = (i == 0) # Only show the GUI for the first simulation
-        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue))
+        use_gui = False # (i == 0) # Only show the GUI for the first simulation
+        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue, rev_status))
         p.start()
         processes.append(p)
+
+    csv_file = "performance.csv"
+    write_headers = not os.path.exists(csv_file)
     
-    # Start plotting
     try:
+        # Monitoring loop for rev_status
+        while True:
+            # Check if all processes are False (initial state)
+            if not any(rev_status) and start_time is None:
+                start_time = time.time()  # Record the start time
+                print("All processes are initially False. Monitoring started...")
+
+            # Check if all processes are True (final state)
+            if all(rev_status):
+                if start_time is not None and end_time is None:
+                    end_time = time.time()  # Record the end time
+                    elapsed_time = end_time - start_time
+                    print(f"All processes have completed a full revolution.")
+                    print(f"Time elapsed: {elapsed_time:.2f} seconds.")
+
+                    with open(csv_file, mode='a', newline='') as file:
+                        writer = csv.writer(file)
+                        if write_headers:
+                            writer.writerow(["Paralllel"])
+                            write_headers = False
+                        writer.writerow([elapsed_time])
+
+
+                    break  # Exit monitoring loop
+
+        # Start plotting
         plot_trajectories(coord_queue, num_simulations)
     except KeyboardInterrupt:
         print("Plotting stopped by user.")

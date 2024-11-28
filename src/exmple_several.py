@@ -67,7 +67,7 @@ def main():
         robot = Quadrupedal(
             timeStep=1./240.,
             initialCoMheight=0.3,
-            robotPATH="urdf/quadrupedal.urdf",
+            robotPATH="../urdf/quadrupedal.urdf",
             startPosition=[0, i, 0.55],
             startOrientation=[0., 0., 0.],
             maxForce=12
