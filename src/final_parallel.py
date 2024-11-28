@@ -307,8 +307,8 @@ def main():
         p.start()
         processes.append(p)
 
-    csv_file = "performance.csv"
-    write_headers = not os.path.exists(csv_file)
+    # csv_file = "performance.csv"
+    # write_headers = not os.path.exists(csv_file)
     
     try:
         # Monitoring loop for rev_status
@@ -326,12 +326,12 @@ def main():
                     print(f"All processes have completed a full revolution.")
                     print(f"Time elapsed: {elapsed_time:.2f} seconds.")
 
-                    with open(csv_file, mode='a', newline='') as file:
-                        writer = csv.writer(file)
-                        if write_headers:
-                            writer.writerow(["Paralllel"])
-                            write_headers = False
-                        writer.writerow([elapsed_time])
+                    # with open(csv_file, mode='a', newline='') as file:
+                    #     writer = csv.writer(file)
+                    #     if write_headers:
+                    #         writer.writerow(["Paralllel", "Serial"])
+                    #         write_headers = False
+                    #     writer.writerow([elapsed_time])
 
 
                     break  # Exit monitoring loop
