@@ -1,4 +1,5 @@
-# LeggedRobot
+# QuadRobotParallelSim
+
 This repository is a walking robot simulator using pybullet.
 
 ## Requirements
