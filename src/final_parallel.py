@@ -302,7 +302,7 @@ def main():
 
     # Parallel clients for each simulation
     for i in range(num_simulations):
-        use_gui = False # (i == 0) # Only show the GUI for the first simulation
+        use_gui = (i == 0) # Only show the GUI for the first simulation
         p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue, rev_status))
         p.start()
         processes.append(p)
