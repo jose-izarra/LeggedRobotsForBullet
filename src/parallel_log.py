@@ -344,7 +344,7 @@ def main():
 
 if __name__ == "__main__":
     num_robots = 1 # Number of robots per simulation
-    num_simulations = 3 # Number of parallel simulations
+    num_simulations = 4 # Number of parallel simulations
 
     manager = Manager()
 

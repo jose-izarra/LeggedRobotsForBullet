@@ -305,7 +305,7 @@ def main():
 
 
 if __name__ == "__main__":
-    NUM_SIMULATIONS = 3 # Number of parallel simulations
+    NUM_SIMULATIONS = 4 # Number of parallel simulations
     NUM_ROBOTS = 1 # Number of robots per simulation
     finished = [False for _ in range(NUM_SIMULATIONS)]
     total_time = [0] # Total time taken for all simulations = execution time
