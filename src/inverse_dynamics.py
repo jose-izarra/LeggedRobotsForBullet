@@ -47,8 +47,6 @@ class InverseDynamics:
         feedBackTau = jacobian.T*(self.Kv*(vd-v)+self.Kp*(xd-x))
         tau = feedBackTau + feedForwardTau
 
-
-
         return [tau[0,0],tau[1,0],tau[2,0]]
 
 
@@ -75,7 +73,6 @@ class InverseDynamics:
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
 
-
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)
         dT02dq2[0,2] = np.cos(q2)
@@ -83,7 +80,6 @@ class InverseDynamics:
         dT02dq2[1,2] = np.sin(q1)*np.sin(q2)
         dT02dq2[2,0] = -np.cos(q1)*np.cos(q2)
         dT02dq2[2,2] = -np.cos(q1)*np.sin(q2)
-
         dT03dq1 = np.matrix(np.zeros((4,4)))
         dT03dq1[1,0] = np.sin(q2+q3)*np.cos(q1)
         dT03dq1[1,1] = -np.sin(q1)
@@ -145,7 +141,6 @@ class InverseDynamics:
         dT02dq1[2,1] = np.cos(q1)
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
-
 
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)
@@ -330,7 +325,6 @@ class InverseDynamics:
         dT02dq1[2,1] = np.cos(q1)
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
-
 
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)

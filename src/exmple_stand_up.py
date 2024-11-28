@@ -12,6 +12,7 @@ if __name__ == "__main__":
 
     qdrp = Quadrupedal(timeStep=1./240., initialCoMheight=0.3,startPosition=[0,0,0.55],startOrientation=[0.,0.,0.], maxForce=12,robotPATH="../urdf/quadrupedal.urdf")
 
+
     while(1):
         for i in np.arange(0,0.1,0.001):
             targetPositionLF[2] += 0.001
