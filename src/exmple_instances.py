@@ -12,7 +12,7 @@ def main():
     robot1 = Quadrupedal(
         timeStep=1./240.,
         initialCoMheight=0.3,
-        robotPATH="urdf/quadrupedal.urdf",
+        robotPATH="../urdf/quadrupedal.urdf",
         startPosition=[0, 0, 0.55],
         startOrientation=[0., 0., 0.],
         maxForce=12
@@ -21,7 +21,7 @@ def main():
     robot2 = Quadrupedal(
         timeStep=1./240.,
         initialCoMheight=0.3,
-        robotPATH="urdf/quadrupedal.urdf",
+        robotPATH="../urdf/quadrupedal.urdf",
         startPosition=[1, 0, 0.55],  # Offset position for the second robot
         startOrientation=[0., 0., 0.],
         maxForce=12

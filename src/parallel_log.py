@@ -10,7 +10,8 @@ from multiprocessing import Process, Manager, Queue
 from queue import Empty
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import threading
+from mpl_toolkits.mplot3d import Axes3D
+import csv
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
@@ -32,7 +33,7 @@ def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency
     # Randomly decide if jitter should be applied
     if random.random() < jitter_frequency:
         jitter_x = random.uniform(-jitter_magnitude, jitter_magnitude)
-        jitter_y = random.uniform(-0.5, 0.5) 
+        jitter_y = random.uniform(-0.5, 0.5)
         jitter_z = random.uniform(-jitter_magnitude, jitter_magnitude)
 
         # Apply the jitter
@@ -56,17 +57,20 @@ def reset_robot(robot, i):
     """
     # Reset the base position and orientation
     pb.resetBasePositionAndOrientation(robot._robotId, [0, i, 0.55], [0, 0, 0, 1])
-    
+
     # Reset the base velocity
     pb.resetBaseVelocity(robot._robotId, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
-    
+
     print("Robot has been reset!")
 
-def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
+def run_simulation(robot_id, num_robots, use_gui, coord_queue, rev_status, time_status, max_points=500):
     """
     Run an independent simulation for each robot in a separate PyBullet client.
     Log the coordinates of each leg for plotting.
     """
+    start_simulation_time = time.perf_counter()
+
+
     if use_gui:
         physics_client = pb.connect(pb.GUI)
     else:
@@ -90,10 +94,10 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
         robots.append(robot)
 
     # Oval trajectory parameters
-    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path 
-    oval_center_lh = [-0.2, 0.11, -0.2] 
-    oval_center_lf = [0.2, 0.11, -0.2] 
-    oval_center_rh = [-0.2, -0.11, -0.2]  
+    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path
+    oval_center_lh = [-0.2, 0.11, -0.2]
+    oval_center_lf = [0.2, 0.11, -0.2]
+    oval_center_rh = [-0.2, -0.11, -0.2]
 
     initial_width = 0.1  # Radius along x-axis (horizontal stretch)
     initial_height = 0.01  # Radius along z-axis (vertical stretch)
@@ -114,9 +118,9 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
     }
 
     try:
-        while True:
+        # while True:
             # Reset robot state if "R" key is pressed
-            if controls.is_reset_key_pressed(): 
+            if controls.is_reset_key_pressed():
                 for i in range(num_robots):
                     reset_robot(robots[i], i)
 
@@ -136,6 +140,10 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
             if angle > 2 * math.pi:
                 angle -= 2 * math.pi
 
+            # Set the rev_status to True after the first revolution
+            rev_status[robot_id] = True
+
+
             for qdrp in robots:
                 # Diagonal Pair 1: Front Right (RF) and Left Hind (LH)
                 RF_x, RF_y, RF_z = generate_oval_trajectory(oval_center_rf, x_radius, z_radius, angle)
@@ -148,7 +156,7 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
                 targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
                 targetPositionLF = np.array([0.2, 0.11, -0.2])    # Left Front
                 targetPositionLH = np.array([-0.2, 0.11, -0.2])   # Left Hind
-                
+
                 # Update target positions
                 targetPositionRF[0], targetPositionRF[1], targetPositionRF[2] = RF_x, RF_y, RF_z
                 targetPositionLH[0], targetPositionLH[1], targetPositionLH[2] = LH_x, LH_y, LH_z
@@ -196,14 +204,16 @@ def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
     finally:
         pb.disconnect()
 
+    end_simulation_time = time.perf_counter()
+    time_status[robot_id] = end_simulation_time - start_simulation_time
+    print(f"Simulation {robot_id} completed in {time_status[robot_id]:.2f} seconds.")
+
+
+
 def plot_trajectories(coord_queue, num_simulations, max_points=500):
     """
     Plot the trajectories of the robots in real-time using a queue in 3D.
     """
-    from mpl_toolkits.mplot3d import Axes3D
-    import matplotlib.pyplot as plt
-    from matplotlib.animation import FuncAnimation
-    from queue import Empty
 
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
@@ -229,7 +239,7 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
                 # Try to get data from the queue without blocking
                 data = coord_queue.get(block=False)
                 robot_id = data['id']
-                
+
                 # Update the data for the specific robot
                 robot_data[robot_id]['x_coords'] = data['x_coords']
                 robot_data[robot_id]['y_coords'] = data['y_coords']
@@ -244,15 +254,15 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         ax.set_title("Real-Time 3D Leg Trajectories")
-        
+
         # Set reasonable axis limits
         ax.set_xlim(0.0, 0.4)
         ax.set_ylim(-0.5, 0.5)
         ax.set_zlim(-0.4, 0.0)
-        
+
         ax.legend()
         return lines + points
-    
+
     def update(frame):
         # Update data from queue
         update_robot_data()
@@ -264,12 +274,12 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
             if x_data and y_data and z_data:  # Check if all lists have data
                 lines[robot_id].set_data_3d(x_data, y_data, z_data)  # Update 3D trajectory
-                
+
                 # Ensure the last point is a sequence
                 last_x = [x_data[-1]] if not isinstance(x_data[-1], (list, np.ndarray)) else x_data[-1]
                 last_y = [y_data[-1]] if not isinstance(y_data[-1], (list, np.ndarray)) else y_data[-1]
                 last_z = [z_data[-1]] if not isinstance(z_data[-1], (list, np.ndarray)) else z_data[-1]
-                
+
                 points[robot_id].set_data_3d(last_x, last_y, last_z)  # Update red dot
             else:
                 lines[robot_id].set_data_3d([], [], [])
@@ -282,8 +292,7 @@ def plot_trajectories(coord_queue, num_simulations, max_points=500):
 
 
 def main():
-    num_robots = 1 # Number of robots per simulation
-    num_simulations = 3 # Number of parallel simulations
+    start_time = time.perf_counter()
 
     # Multiprocessing Queue for thread-safe coordinate logging
     coord_queue = Queue(maxsize=1000)  # Limiting queue size to prevent memory issues
@@ -292,21 +301,41 @@ def main():
 
     # Parallel clients for each simulation
     for i in range(num_simulations):
-        use_gui = (i == 0) # Only show the GUI for the first simulation
-        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue))
+        use_gui = False # Only show the GUI for the first simulation
+        p = Process(target=run_simulation, args=(i, num_robots, use_gui, coord_queue, rev_status, time_status))
         p.start()
         processes.append(p)
-    
-    # Start plotting
-    try:
-        plot_trajectories(coord_queue, num_simulations)
-    except KeyboardInterrupt:
-        print("Plotting stopped by user.")
-    finally:
-        # Ensure all processes terminate cleanly
-        for p in processes:
-            p.terminate()
-            p.join()
+
+    while not all(s == True for s in rev_status):
+        time.sleep(0.1)  # wait until all processes have completed a full revolution
+
+    for p in processes:
+        p.terminate()
+        p.join()
+
+    print("All processes terminated.")
+    print("Time taken for each simulation:")
+    for i, time_taken in enumerate(time_status):
+        print(f"Simulation {i}: {time_taken:.2f} seconds")
+
+    end_time = time.perf_counter()
+    execution_time = end_time - start_time
+    print(f"Total time taken: {execution_time} seconds.")
+
+    # Write simulation time to CSV
+    with open('parallel.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([execution_time])
+
 
 if __name__ == "__main__":
+    num_robots = 1 # Number of robots per simulation
+    num_simulations = 3 # Number of parallel simulations
+
+    manager = Manager()
+
+    # array of booleans to track when one process does its first oval revolution
+    rev_status = manager.list([False for _ in range(num_simulations)])
+    time_status = manager.list([0 for _ in range(num_simulations)])
+
     main()

@@ -1,5 +1,5 @@
 import numpy as np
-import sympy as sy
+# import sympy as sy
 import scipy.linalg as la
 #3DoF Inverse Dynamics
 class InverseDynamics:
@@ -12,7 +12,7 @@ class InverseDynamics:
         self.m = linkMassList
         self.S = comVectorList
         self.Hhat=[]
-        self._g = np.matrix([0.,0.,-9.8,0.]).T 
+        self._g = np.matrix([0.,0.,-9.8,0.]).T
         for i in range(3):
             self.Hhat.append(self.HhatMatrix(Ihat=linkInertiaList[i],S=comVectorList[i],m=linkMassList[i]))
 
@@ -47,7 +47,7 @@ class InverseDynamics:
         feedBackTau = jacobian.T*(self.Kv*(vd-v)+self.Kp*(xd-x))
         tau = feedBackTau + feedForwardTau
 
-        
+
 
         return [tau[0,0],tau[1,0],tau[2,0]]
 
@@ -74,7 +74,7 @@ class InverseDynamics:
         dT02dq1[2,1] = np.cos(q1)
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
-        
+
 
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)
@@ -83,7 +83,7 @@ class InverseDynamics:
         dT02dq2[1,2] = np.sin(q1)*np.sin(q2)
         dT02dq2[2,0] = -np.cos(q1)*np.cos(q2)
         dT02dq2[2,2] = -np.cos(q1)*np.sin(q2)
-        
+
         dT03dq1 = np.matrix(np.zeros((4,4)))
         dT03dq1[1,0] = np.sin(q2+q3)*np.cos(q1)
         dT03dq1[1,1] = -np.sin(q1)
@@ -115,11 +115,11 @@ class InverseDynamics:
 
 
         M[0,0] = np.trace(dT01dq1 * self.Hhat[0] * dT01dq1.T) + np.trace(dT02dq1 * self.Hhat[1] * dT02dq1.T) + np.trace(dT03dq1 * self.Hhat[2] * dT03dq1.T) #k=1 i=1,j=1
-        M[1,1] = np.trace(dT02dq2 * self.Hhat[1] * dT02dq2.T) + np.trace(dT03dq2 * self.Hhat[2] * dT03dq2.T) 
-        M[2,2] = np.trace(dT03dq3 * self.Hhat[2] * dT03dq3.T) 
+        M[1,1] = np.trace(dT02dq2 * self.Hhat[1] * dT02dq2.T) + np.trace(dT03dq2 * self.Hhat[2] * dT03dq2.T)
+        M[2,2] = np.trace(dT03dq3 * self.Hhat[2] * dT03dq3.T)
 
-        M[0,1] = M[1,0] = np.trace(dT02dq2 * self.Hhat[1] * dT02dq1.T) + np.trace(dT03dq2 * self.Hhat[2] * dT03dq1.T) 
-        M[0,2] = M[2,0] = np.trace(dT03dq3 * self.Hhat[2] * dT03dq1.T) 
+        M[0,1] = M[1,0] = np.trace(dT02dq2 * self.Hhat[1] * dT02dq1.T) + np.trace(dT03dq2 * self.Hhat[2] * dT03dq1.T)
+        M[0,2] = M[2,0] = np.trace(dT03dq3 * self.Hhat[2] * dT03dq1.T)
         M[1,2] = M[2,1] = np.trace(dT03dq3 * self.Hhat[2] * dT03dq2.T)
 
         return M
@@ -145,7 +145,7 @@ class InverseDynamics:
         dT02dq1[2,1] = np.cos(q1)
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
-        
+
 
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)
@@ -154,7 +154,7 @@ class InverseDynamics:
         dT02dq2[1,2] = np.sin(q1)*np.sin(q2)
         dT02dq2[2,0] = -np.cos(q1)*np.cos(q2)
         dT02dq2[2,2] = -np.cos(q1)*np.sin(q2)
-        
+
         dT03dq1 = np.matrix(np.zeros((4,4)))
         dT03dq1[1,0] = np.sin(q2+q3)*np.cos(q1)
         dT03dq1[1,1] = -np.sin(q1)
@@ -283,7 +283,7 @@ class InverseDynamics:
                 +np.trace(dt03dq2q3 * self.Hhat[2] * dT03dq1.T) * dtheta[1]*dtheta[2] \
                 +np.trace(dT03dq3q1 * self.Hhat[2] * dT03dq1.T)*dtheta[2]*dtheta[0] \
                 +np.trace(dT03dq3q2 * self.Hhat[2] * dT03dq1.T)*dtheta[2]*dtheta[1] \
-                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq1.T)*dtheta[2]*dtheta[2] 
+                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq1.T)*dtheta[2]*dtheta[2]
 
         h[1] = +np.trace(dT02dq1q1 * self.Hhat[1] * dT02dq2.T)*dtheta[0]*dtheta[0] \
                 +np.trace(dT03dq1q1 * self.Hhat[2] * dT03dq2.T)*dtheta[0]*dtheta[0] \
@@ -297,7 +297,7 @@ class InverseDynamics:
                 +np.trace(dt03dq2q3 * self.Hhat[2] * dT03dq2.T) * dtheta[1]*dtheta[2] \
                 +np.trace(dT03dq3q1 * self.Hhat[2] * dT03dq2.T)*dtheta[2]*dtheta[0] \
                 +np.trace(dT03dq3q2 * self.Hhat[2] * dT03dq2.T)*dtheta[2]*dtheta[1] \
-                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq2.T)*dtheta[2]*dtheta[2] 
+                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq2.T)*dtheta[2]*dtheta[2]
 
         h[2] = np.trace(dT03dq1q1 * self.Hhat[2] * dT03dq3.T)*dtheta[0]*dtheta[0] \
                 +np.trace(dT03dq1q2 * self.Hhat[2] * dT03dq3.T) * dtheta[0]*dtheta[1] \
@@ -307,7 +307,7 @@ class InverseDynamics:
                 +np.trace(dt03dq2q3 * self.Hhat[2] * dT03dq3.T) * dtheta[1]*dtheta[2] \
                 +np.trace(dT03dq3q1 * self.Hhat[2] * dT03dq3.T)*dtheta[2]*dtheta[0] \
                 +np.trace(dT03dq3q2 * self.Hhat[2] * dT03dq3.T)*dtheta[2]*dtheta[1] \
-                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq3.T)*dtheta[2]*dtheta[2] 
+                +np.trace(dT03dq3q3 * self.Hhat[2] * dT03dq3.T)*dtheta[2]*dtheta[2]
 
         return np.matrix(h).T
 
@@ -330,7 +330,7 @@ class InverseDynamics:
         dT02dq1[2,1] = np.cos(q1)
         dT02dq1[2,2] = -np.cos(q2)*np.sin(q1)
         dT02dq1[2,3] = self.b2[1]*np.cos(q1)-self.b2[2]*np.sin(q1)
-        
+
 
         dT02dq2 = np.matrix(np.zeros((4,4)))
         dT02dq2[0,0] = -np.sin(q2)
@@ -339,7 +339,7 @@ class InverseDynamics:
         dT02dq2[1,2] = np.sin(q1)*np.sin(q2)
         dT02dq2[2,0] = -np.cos(q1)*np.cos(q2)
         dT02dq2[2,2] = -np.cos(q1)*np.sin(q2)
-        
+
         dT03dq1 = np.matrix(np.zeros((4,4)))
         dT03dq1[1,0] = np.sin(q2+q3)*np.cos(q1)
         dT03dq1[1,1] = -np.sin(q1)

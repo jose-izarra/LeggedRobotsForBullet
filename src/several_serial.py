@@ -45,10 +45,10 @@ def reset_robot(robot, i):
     """
     # Reset the base position and orientation
     pb.resetBasePositionAndOrientation(robot._robotId, [0, i, 0.55], [0, 0, 0, 1])
-    
+
     # Reset the base velocity
     pb.resetBaseVelocity(robot._robotId, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
-    
+
     print("Robot has been reset!")
 
 
@@ -67,7 +67,7 @@ def main():
         robot = Quadrupedal(
             timeStep=1./240.,
             initialCoMheight=0.3,
-            robotPATH="urdf/quadrupedal.urdf",
+            robotPATH="../urdf/quadrupedal.urdf",
             startPosition=[0, i, 0.55],
             startOrientation=[0., 0., 0.],
             maxForce=12
@@ -88,10 +88,10 @@ def main():
     #                    maxForce=12, robotPATH="urdf/quadrupedal.urdf")
 
     # Oval trajectory parameters
-    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path 
-    oval_center_lh = [-0.2, 0.11, -0.2] 
-    oval_center_lf = [0.2, 0.11, -0.2] 
-    oval_center_rh = [-0.2, -0.11, -0.2]  
+    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path
+    oval_center_lh = [-0.2, 0.11, -0.2]
+    oval_center_lf = [0.2, 0.11, -0.2]
+    oval_center_rh = [-0.2, -0.11, -0.2]
 
     initial_width = 0.1  # Radius along x-axis (horizontal stretch)
     initial_height = 0.01  # Radius along z-axis (vertical stretch)
@@ -105,9 +105,10 @@ def main():
 
     try:
         while True:
+            start_time = time.time()
 
             # Reset robot state if "R" key is pressed
-            if controls.is_reset_key_pressed(): 
+            if controls.is_reset_key_pressed():
                 for i in range(num_robots):
                     reset_robot(robots[i], i)
 
@@ -134,7 +135,7 @@ def main():
                 targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
                 targetPositionLF = np.array([0.2, 0.11, -0.2])    # Left Front
                 targetPositionLH = np.array([-0.2, 0.11, -0.2])   # Left Hind
-                
+
                 # Update target positions
                 targetPositionRF[0], targetPositionRF[1], targetPositionRF[2] = RF_x, RF_y, RF_z
                 targetPositionLH[0], targetPositionLH[1], targetPositionLH[2] = LH_x, LH_y, LH_z
@@ -156,6 +157,9 @@ def main():
                 # Advance simulation
                 qdrp.oneStep()
 
+            # Calculate the time taken for each iteration
+            iteration_time = time.time() - start_time
+            print(f"Time taken for iteration: {iteration_time:.5f} seconds")
     except KeyboardInterrupt:
         print("Simulation stopped by user.")
     finally:

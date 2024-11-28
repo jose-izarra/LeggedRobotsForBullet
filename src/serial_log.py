@@ -6,9 +6,9 @@ import pybullet_data
 import controls
 import random
 from robot import Quadrupedal
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from queue import Queue
+from multiprocessing import Queue
+import csv
+
 
 def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency=0.03, jitter_magnitude=0.01):
     """
@@ -22,6 +22,9 @@ def generate_oval_trajectory(center, x_radius, z_radius, angle, jitter_frequency
     :param jitter_magnitude: Maximum range for jitter applied to x, y, z
     :return: [x, y, z] coordinates of the point with optional jitter
     """
+    global average_time
+
+    start_time = time.perf_counter()
     # Calculate the basic oval trajectory point
     x = center[0] + x_radius * math.cos(-angle)
     y = center[1]  # Assuming the center's y position doesn't change (static on the ground)
@@ -60,9 +63,10 @@ def reset_robot(robot, i):
 
     print("Robot has been reset!")
 
-def run_sequential_simulation(num_simulations, use_gui, max_points=500):
+def run_simulation(robot_id, num_robots, use_gui, coord_queue, max_points=500):
     """
-    Run simulations sequentially in the same PyBullet client.
+    Run an independent simulation for each robot in a separate PyBullet client.
+    Log the coordinates of each leg for plotting.
     """
     if use_gui:
         physics_client = pb.connect(pb.GUI)
@@ -72,12 +76,10 @@ def run_sequential_simulation(num_simulations, use_gui, max_points=500):
     pb.setAdditionalSearchPath(pybullet_data.getDataPath())
     pb.setGravity(0, 0, -9.8)
 
-    # Store coordinates for all simulations
-    all_coordinates = {}
-
-    # Create the robot instances
     robots = []
-    for i in range(num_simulations):
+
+    # Create the robot instances for the specific client
+    for i in range(num_robots):
         robot = Quadrupedal(
             timeStep=1./240.,
             initialCoMheight=0.3,
@@ -87,42 +89,43 @@ def run_sequential_simulation(num_simulations, use_gui, max_points=500):
             maxForce=12
         )
         robots.append(robot)
-        all_coordinates[i] = {
-            'id': i,
-            'x_coords': [],
-            'y_coords': [],
-            'z_coords': []
-        }
 
     # Oval trajectory parameters
-    oval_centers = {
-        'RF': [0.2, -0.11, -0.2],  # Right Front
-        'LH': [-0.2, 0.11, -0.2],  # Left Hind
-        'LF': [0.2, 0.11, -0.2],   # Left Front
-        'RH': [-0.2, -0.11, -0.2]  # Right Hind
-    }
+    oval_center_rf = [0.2, -0.11, -0.2]  # Center of the oval path
+    oval_center_lh = [-0.2, 0.11, -0.2]
+    oval_center_lf = [0.2, 0.11, -0.2]
+    oval_center_rh = [-0.2, -0.11, -0.2]
 
     initial_width = 0.1  # Radius along x-axis (horizontal stretch)
     initial_height = 0.01  # Radius along z-axis (vertical stretch)
 
-    # Only set up sliders if using GUI
-    if use_gui:
-        width_slider = pb.addUserDebugParameter("Width", 0.01, 0.5, initial_width)
-        height_slider = pb.addUserDebugParameter("Height", 0.01, 0.1, initial_height)
-        angle_step_slider = pb.addUserDebugParameter("Angle Step", 0.01, 1.0, 0.05)
+    width_slider = pb.addUserDebugParameter("Width", 0.01, 0.5, 0.1)
+    height_slider = pb.addUserDebugParameter("Height", 0.01, 0.1, 0.01)
 
+    # Angle increment for faster or slower movement
+    angle_step_slider = pb.addUserDebugParameter("Angle Step", 0.01, 1.0, 0.05)
     angle = 0.0
 
+    # Logging variables to handle coordinate logging
+    coordinates_rf = {
+        'id': robot_id,
+        'x_coords': [],
+        'y_coords': [],
+        'z_coords': []
+    }
+    i = 0
     try:
-        while True:
+        # while i < 1000:
             # Reset robot state if "R" key is pressed
             if controls.is_reset_key_pressed():
-                for i in range(num_simulations):
+                for i in range(num_robots):
                     reset_robot(robots[i], i)
 
-            # Determine parameters based on GUI or default
             if use_gui:
+                # Get the angle step from the slider (how fast the robot moves)
                 angle_step = pb.readUserDebugParameter(angle_step_slider)
+
+                # Get the width and height from the sliders
                 x_radius = pb.readUserDebugParameter(width_slider)
                 z_radius = pb.readUserDebugParameter(height_slider)
             else:
@@ -134,18 +137,20 @@ def run_sequential_simulation(num_simulations, use_gui, max_points=500):
             if angle > 2 * math.pi:
                 angle -= 2 * math.pi
 
-            for robot_idx, qdrp in enumerate(robots):
-                # Generate trajectory points for each leg
-                RF_x, RF_y, RF_z = generate_oval_trajectory(oval_centers['RF'], x_radius, z_radius, angle)
-                LH_x, LH_y, LH_z = generate_oval_trajectory(oval_centers['LH'], x_radius, z_radius, angle)
-                LF_x, LF_y, LF_z = generate_oval_trajectory(oval_centers['LF'], x_radius, z_radius, angle + math.pi)
-                RH_x, RH_y, RH_z = generate_oval_trajectory(oval_centers['RH'], x_radius, z_radius, angle + math.pi)
 
-                # Target positions for legs
-                targetPositionRF = np.array([0.2, -0.11, -0.2])
-                targetPositionRH = np.array([-0.2, -0.11, -0.2])
-                targetPositionLF = np.array([0.2, 0.11, -0.2])
-                targetPositionLH = np.array([-0.2, 0.11, -0.2])
+
+            for qdrp in robots:
+                # Diagonal Pair 1: Front Right (RF) and Left Hind (LH)
+                RF_x, RF_y, RF_z = generate_oval_trajectory(oval_center_rf, x_radius, z_radius, angle)
+                LH_x, LH_y, LH_z = generate_oval_trajectory(oval_center_lh, x_radius, z_radius, angle)
+                # Diagonal Pair 2: Front Left (LF) and Right Hind (RH) (phase-offset by π)
+                LF_x, LF_y, LF_z = generate_oval_trajectory(oval_center_lf, x_radius, z_radius, angle + math.pi)
+                RH_x, RH_y, RH_z = generate_oval_trajectory(oval_center_rh, x_radius, z_radius, angle + math.pi)
+
+                targetPositionRF = np.array([0.2, -0.11, -0.2])  # Right Front
+                targetPositionRH = np.array([-0.2, -0.11, -0.2])  # Right Hind
+                targetPositionLF = np.array([0.2, 0.11, -0.2])    # Left Front
+                targetPositionLH = np.array([-0.2, 0.11, -0.2])   # Left Hind
 
                 # Update target positions
                 targetPositionRF[0], targetPositionRF[1], targetPositionRF[2] = RF_x, RF_y, RF_z
@@ -169,33 +174,42 @@ def run_sequential_simulation(num_simulations, use_gui, max_points=500):
                 qdrp.oneStep()
 
                 # Log coordinates for RF leg
-                coords = all_coordinates[robot_idx]
-                coords['x_coords'].append(RF_x)
-                coords['y_coords'].append(RF_y)
-                coords['z_coords'].append(RF_z)
+                coordinates_rf['x_coords'].append(RF_x)
+                coordinates_rf['y_coords'].append(RF_y)
+                coordinates_rf['z_coords'].append(RF_z)
 
                 # Keep only the last max_points
-                if len(coords['x_coords']) > max_points:
-                    coords['x_coords'] = coords['x_coords'][-max_points:]
-                    coords['y_coords'] = coords['y_coords'][-max_points:]
-                    coords['z_coords'] = coords['z_coords'][-max_points:]
+                if len(coordinates_rf['x_coords']) > max_points:
+                    coordinates_rf['x_coords'] = coordinates_rf['x_coords'][-max_points:]
+                    coordinates_rf['y_coords'] = coordinates_rf['y_coords'][-max_points:]
+                    coordinates_rf['z_coords'] = coordinates_rf['z_coords'][-max_points:]
+
+                # Put coordinates in the queue every few iterations
+                if len(coordinates_rf['x_coords']) % 10 == 0:
+                    try:
+                        coord_queue.put(coordinates_rf.copy(), block=False)
+                    except Exception:
+                        # If queue is full, just pass
+                        pass
 
             time.sleep(1/240.)  # Maintain simulation speed
-
-        return all_coordinates
+            i += 1
 
     except KeyboardInterrupt:
-        print("Simulation stopped by user.")
-        return all_coordinates
+        print(f"Simulation {robot_id} stopped by user.")
     finally:
         pb.disconnect()
 
-def plot_trajectories(all_coordinates, num_simulations, max_points=500):
+def plot_trajectories(coord_queue, num_simulations, max_points=500):
     """
-    Plot the trajectories of the robots in 3D.
+    Plot the trajectories of the robots in real-time using a queue in 3D.
     """
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+    from queue import Empty
+
+
 
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
@@ -209,12 +223,33 @@ def plot_trajectories(all_coordinates, num_simulations, max_points=500):
         lines.append(line)
         points.append(point)
 
+    # Initialize data stores for each robot
+    robot_data = {i: {'x_coords': [], 'y_coords': [], 'z_coords': []} for i in range(num_simulations)}
+
+    def update_robot_data():
+        """
+        Continuously update robot data from the queue
+        """
+        while True:
+            try:
+                # Try to get data from the queue without blocking
+                data = coord_queue.get(block=False)
+                robot_id = data['id']
+
+                # Update the data for the specific robot
+                robot_data[robot_id]['x_coords'] = data['x_coords']
+                robot_data[robot_id]['y_coords'] = data['y_coords']
+                robot_data[robot_id]['z_coords'] = data['z_coords']
+            except Empty:
+                # No data in the queue
+                break
+
     def init():
         # Set axis labels and title
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        ax.set_title("3D Leg Trajectories")
+        ax.set_title("Real-Time 3D Leg Trajectories")
 
         # Set reasonable axis limits
         ax.set_xlim(0.0, 0.4)
@@ -225,10 +260,13 @@ def plot_trajectories(all_coordinates, num_simulations, max_points=500):
         return lines + points
 
     def update(frame):
+        # Update data from queue
+        update_robot_data()
+
         for robot_id in range(num_simulations):
-            x_data = all_coordinates[robot_id]['x_coords']
-            y_data = all_coordinates[robot_id]['y_coords']
-            z_data = all_coordinates[robot_id]['z_coords']
+            x_data = robot_data[robot_id].get('x_coords', [])
+            y_data = robot_data[robot_id].get('y_coords', [])
+            z_data = robot_data[robot_id].get('z_coords', [])
 
             if x_data and y_data and z_data:  # Check if all lists have data
                 lines[robot_id].set_data_3d(x_data, y_data, z_data)  # Update 3D trajectory
@@ -248,15 +286,33 @@ def plot_trajectories(all_coordinates, num_simulations, max_points=500):
     ani = FuncAnimation(fig, update, init_func=init, blit=True, interval=50)
     plt.show()
 
+
 def main():
-    num_simulations = 3 # Number of sequential simulations
-    use_gui = True  # Set to True to show GUI, False for headless
+    # Multiprocessing Queue for thread-safe coordinate logging
+    coord_queue = Queue(maxsize=1000)  # Limiting queue size to prevent memory issues
 
-    # Run simulations and get coordinates
-    all_coordinates = run_sequential_simulation(num_simulations, use_gui)
+    # Execute the simulations serially
+    for i in range(NUM_SIMULATIONS):
+        print("-"*15, "Starting simulation", i, "-"*15)
+        start_time = time.perf_counter()
+        run_simulation(i, NUM_ROBOTS, False, coord_queue)
+        end_time = time.perf_counter()
+        print(f"Simulation {i} took {end_time - start_time:.2f} seconds.")
+        finished[i] = True
 
-    # Plot the trajectories
-    plot_trajectories(all_coordinates, num_simulations)
+        print("-"*15, "Simulation", i, "finished.", finished, "-"*15)
+        total_time[0] += end_time - start_time
+
 
 if __name__ == "__main__":
+    NUM_SIMULATIONS = 3 # Number of parallel simulations
+    NUM_ROBOTS = 1 # Number of robots per simulation
+    finished = [False for _ in range(NUM_SIMULATIONS)]
+    total_time = [0] # Total time taken for all simulations = execution time
     main()
+    print("Total time taken for all simulations:", total_time[0])
+
+    # Write the logged coordinates to a CSV file
+    with open('serial.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([total_time[0]])
