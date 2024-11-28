@@ -41,10 +41,10 @@ def reset_robot(robot):
     """
     # Reset the base position and orientation
     pb.resetBasePositionAndOrientation(robot._robotId, [0, 0, 0.55], [0, 0, 0, 1])
-    
+
     # Reset the base velocity
     pb.resetBaseVelocity(robot._robotId, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
-    
+
     print("Robot has been reset!")
 
 
@@ -53,7 +53,7 @@ def main():
     physicsClient = pb.connect(pb.GUI)
     pb.setAdditionalSearchPath(pybullet_data.getDataPath())
     pb.setGravity(0,0,-9.8)
-    
+
 
     # Initial target positions
     targetPositionRF = np.array([0.2, -0.11, -0.2])  # Right Front
@@ -86,7 +86,7 @@ def main():
         while True:
 
             # Reset robot state if "R" key is pressed
-            if controls.is_reset_key_pressed(): 
+            if controls.is_reset_key_pressed():
                 reset_robot(qdrp)
 
             # Get the angle step from the slider (how fast the robot moves)
@@ -128,13 +128,10 @@ def main():
             # Advance simulation
             qdrp.oneStep()
 
-        
-
     except KeyboardInterrupt:
         print("Simulation stopped by user.")
 
 
 
 if __name__ == "__main__":
-
     main()
