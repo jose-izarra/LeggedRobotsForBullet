@@ -64,7 +64,7 @@ def main():
     # Quadrupedal robot initialization
     qdrp = Quadrupedal(timeStep=1./240., initialCoMheight=0.3,
                        startPosition=[0, 1, 0.55], startOrientation=[0., 0., 0.],
-                       maxForce=12, robotPATH="urdf/quadrupedal.urdf")
+                       maxForce=12, robotPATH="../urdf/quadrupedal.urdf")
 
     # Oval trajectory parameters
     oval_center_rf = [0.2, -0.2]  # Center of the oval path (front legs)
