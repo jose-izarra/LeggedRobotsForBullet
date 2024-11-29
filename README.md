@@ -11,6 +11,7 @@
 - [Usage](#usage)
 - [Methodology](#methodology)
 - [Performance Evaluation](#performance-evaluation)
+- [Acknowledgements](#acknowledgements)
 
 
 ## Overview 🌍
@@ -86,9 +87,9 @@ Trajectories are generated using oval equations with added jitter for realism. �
 
 ![speedup](/img/execution_times_comparison.png)
 
+**Don't hesitate to reach out if you have any questions or suggestions! 🦾**
+
 ## Acknowledgments 
 
 This project is based on [LeggedRobotsForBullet]([https://github.com/original-author/repo-name](https://github.com/haruki1526/LeggedRobotsForBullet)) by Haruki Takamura. The original project is licensed under the MIT License.
 
-
-**Don't hesitate to reach out if you have any questions or suggestions! 🦾**
